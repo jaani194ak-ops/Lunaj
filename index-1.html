@@ -1,0 +1,94 @@
+<!DOCTYPE html><html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>LUNAJ</title>
+<link rel="manifest" href="manifest.json"><link rel="icon" href="icon.svg"><meta name="theme-color" content="#070b1f">
+<style>
+*{box-sizing:border-box;margin:0}html,body{height:100%}
+body{background:radial-gradient(ellipse at 70% 0,#1d2a5c,#0b1030 45%,#050816);color:#e8ecff;font:16px system-ui,sans-serif;overflow:hidden}
+.st{position:fixed;inset:0;pointer-events:none}.st i{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;animation:tw 3s infinite}
+@keyframes tw{50%{opacity:.15}}
+.app{position:relative;height:100%;display:flex;flex-direction:column;max-width:560px;margin:auto;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+header{display:flex;align-items:center;gap:10px;padding:14px 16px}
+header img{width:36px;height:36px;border-radius:10px}
+h1{font:700 24px Georgia,serif;letter-spacing:.3em;color:#f4e7b8;flex:1}
+.me{font-size:12px;color:#9aa6d8}
+.box{flex:1;overflow:auto;padding:8px 14px}
+.row{display:flex;gap:8px;padding:10px 14px}
+input{flex:1;background:#121a40;border:1px solid #2a3770;color:#fff;border-radius:14px;padding:13px;font-size:16px;min-width:0}
+button{background:#f4e7b8;color:#0b1030;border:0;border-radius:14px;padding:12px 16px;font-weight:700;font-size:15px}
+button.g{background:#1c2656;color:#f4e7b8}
+.f{display:flex;align-items:center;gap:12px;padding:14px;margin-bottom:8px;background:#101840cc;border:1px solid #243068;border-radius:16px}
+.f b{flex:1}.dot{width:38px;height:38px;border-radius:50%;background:#f4e7b8;color:#0b1030;display:grid;place-items:center;font-weight:700}
+.m{max-width:80%;padding:10px 13px;margin:6px 0;border-radius:16px;word-wrap:break-word}
+.m.o{margin-left:auto;background:#f4e7b8;color:#0b1030;border-bottom-right-radius:4px}
+.m.i{background:#1c2656;border-bottom-left-radius:4px}
+.hide{display:none!important}
+#ov{position:fixed;inset:0;background:#050816ee;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:9;font-size:22px}
+#ov div{display:flex;gap:14px}
+.hint{text-align:center;color:#9aa6d8;padding:30px 20px;font-size:14px}
+</style></head><body>
+<div class="st" id="st"></div>
+<div class="app">
+<header><img src="icon.svg" alt=""><h1>LUNAJ</h1><span class="me" id="me"></span></header>
+
+<section id="s0" class="hide" style="padding:30px 20px">
+<p style="margin-bottom:6px;font-size:20px">Apna naam chuno</p>
+<p class="hint" style="padding:0 0 16px;text-align:left">Sirf chhote english letters aur numbers. Dost isi naam se tumhe dhoondhega.</p>
+<div class="row" style="padding:0"><input id="nm" placeholder="jaise: chandu123" maxlength="20" autocapitalize="none"><button onclick="reg()">Shuru karo</button></div>
+</section>
+
+<section id="s1" class="hide" style="flex:1;display:flex;flex-direction:column;min-height:0">
+<div class="row"><input id="fr" placeholder="Dost ka naam likho" autocapitalize="none"><button onclick="addF()">Jodo</button></div>
+<div class="box" id="fl"></div>
+</section>
+
+<section id="s2" class="hide" style="flex:1;display:flex;flex-direction:column;min-height:0">
+<div class="row" style="align-items:center"><button class="g" onclick="back()">Peeche</button><b id="cn" style="flex:1;font-size:18px"></b><button onclick="vc()">Call</button></div>
+<div class="box" id="ms"></div>
+<div class="row"><input id="tx" placeholder="Message likho..." onkeydown="if(event.key=='Enter')send()"><button onclick="send()">Bhejo</button></div>
+</section>
+</div>
+<div id="ov" class="hide"><span id="ot"></span><div><button id="ob" onclick="ans()">Utha lo</button><button class="g" onclick="endC()">Kaat do</button></div></div>
+<audio id="au" autoplay></audio>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+for(let i=0;i<70;i++){const s=document.createElement('i');s.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;animation-delay:${Math.random()*3}s;opacity:${.4+Math.random()*.6}`;$('st').appendChild(s)}
+const L=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}};
+const S=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let me=L('me',''),fr=L('fr',[]),hist=L('hist',{}),peer,conns={},cur=null,call=null,inc=null,stream=null;
+function show(n){['s0','s1','s2'].forEach((x,i)=>$(x).classList.toggle('hide',i!=n))}
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+function reg(){const n=$('nm').value.trim().toLowerCase();if(!/^[a-z0-9_]{3,20}$/.test(n))return alert('3-20 letters/numbers/_ hi chalega');me=n;S('me',me);start()}
+function start(){
+ if(!me){show(0);return}
+ $('me').textContent='@'+me;
+ peer=new Peer('lunaj-'+me);
+ peer.on('connection',setup);
+ peer.on('call',c=>{inc=c;$('ot').textContent='📞 @'+c.peer.slice(6)+' call kar raha hai';$('ob').classList.remove('hide');$('ov').classList.remove('hide');ping('LUNAJ','@'+c.peer.slice(6)+' call kar raha hai')});
+ peer.on('error',e=>{if(e.type=='unavailable-id'){alert('Ye naam kisi aur ne le liya. Dusra naam chuno.');localStorage.removeItem('me');me='';show(0)}else if(e.type=='peer-unavailable'){alert('Dost abhi online nahi hai')}});
+ peer.on('disconnected',()=>setTimeout(()=>{try{peer.reconnect()}catch(e){}},2000));
+ list();show(1);
+ if('Notification' in window&&Notification.permission=='default')document.body.addEventListener('click',()=>Notification.requestPermission(),{once:true});
+}
+function setup(c){
+ const n=c.peer.slice(6);
+ c.on('open',()=>{conns[n]=c;if(!fr.includes(n)){fr.push(n);S('fr',fr);list()}});
+ c.on('data',d=>{add(n,d,false);if(document.hidden||cur!=n)ping('@'+n,d)});
+ c.on('close',()=>{delete conns[n]});c.on('error',()=>{delete conns[n]});
+}
+function addF(){const n=$('fr').value.trim().toLowerCase();if(!n||n==me)return;if(!fr.includes(n)){fr.push(n);S('fr',fr)}$('fr').value='';list()}
+function list(){const b=$('fl');b.textContent='';
+ if(!fr.length){const p=document.createElement('p');p.className='hint';p.textContent='Abhi koi dost nahi. Upar dost ka naam likh kar Jodo dabao. Dost bhi LUNAJ kholega to baat ho sakti hai.';b.appendChild(p)}
+ fr.forEach(n=>{const d=document.createElement('div');d.className='f';d.innerHTML='<span class="dot"></span><b></b><button class="g">Chat</button>';d.children[0].textContent=n[0].toUpperCase();d.children[1].textContent='@'+n;d.onclick=()=>open_(n);b.appendChild(d)})}
+function open_(n){cur=n;$('cn').textContent='@'+n;draw();show(2);const c=conns[n];if(!c||!c.open){const x=peer.connect('lunaj-'+n,{reliable:true});setup(x)}}
+function back(){cur=null;show(1)}
+function add(n,t,o){(hist[n]=hist[n]||[]).push({t,o});hist[n]=hist[n].slice(-200);S('hist',hist);if(cur==n)draw()}
+function draw(){const b=$('ms');b.textContent='';(hist[cur]||[]).forEach(m=>{const d=document.createElement('div');d.className='m '+(m.o?'o':'i');d.textContent=m.t;b.appendChild(d)});b.scrollTop=b.scrollHeight}
+function send(){const t=$('tx').value.trim();if(!t||!cur)return;const c=conns[cur];if(!c||!c.open)return alert('Dost abhi online nahi hai. Thodi der baad try karo.');c.send(t);add(cur,t,true);$('tx').value=''}
+function ping(t,b){if(!('Notification' in window)||Notification.permission!='granted')return;navigator.serviceWorker?.getRegistration().then(r=>r?r.showNotification(t,{body:b,icon:'icon.svg',vibrate:[200,100,200]}):new Notification(t,{body:b}))}
+function mic(){return navigator.mediaDevices.getUserMedia({audio:true})}
+function vc(){if(!cur)return;mic().then(s=>{stream=s;call=peer.call('lunaj-'+cur,s);$('ot').textContent='📞 @'+cur+' ko call ho rahi hai...';$('ob').classList.add('hide');$('ov').classList.remove('hide');hook(call)}).catch(()=>alert('Mic ki permission do'))}
+function ans(){if(!inc)return;mic().then(s=>{stream=s;call=inc;inc.answer(s);hook(call);$('ot').textContent='🎙️ Baat chal rahi hai';$('ob').classList.add('hide')}).catch(()=>alert('Mic ki permission do'))}
+function hook(c){c.on('stream',r=>{$('au').srcObject=r;$('au').play();$('ot').textContent='🎙️ Baat chal rahi hai'});c.on('close',endC)}
+function endC(){try{call&&call.close();inc&&inc.close()}catch(e){}stream&&stream.getTracks().forEach(t=>t.stop());call=inc=stream=null;$('ov').classList.add('hide')}
+start();
+</script></body></html>
